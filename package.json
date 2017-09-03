@@ -1,0 +1,18 @@
+{
+  "name": "jelly",
+  "version": "1.0.0",
+  "description": "HTML5 and Canvas game-- inspired by Neopets classic, Jelly Blobs of Doom.",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "webpack": "^3.5.5"
+  },
+  "dependencies": {
+    "lodash": "^4.17.4"
+  }
+}

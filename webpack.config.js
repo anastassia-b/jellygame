@@ -1,7 +1,7 @@
 module.exports = {
-  entry: './lib/jellygame.js',
+  entry: './docs/jellygame.js',
   output: {
-    filename: './lib/bundle.js',
+    filename: './docs/bundle.js',
   },
   devtool: 'source-map'
 };

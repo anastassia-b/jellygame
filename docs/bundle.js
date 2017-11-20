@@ -60,19 +60,124 @@
 /******/ 	__webpack_require__.p = "";
 /******/
 /******/ 	// Load entry module and return exports
-/******/ 	return __webpack_require__(__webpack_require__.s = 0);
+/******/ 	return __webpack_require__(__webpack_require__.s = 2);
 /******/ })
 /************************************************************************/
 /******/ ([
 /* 0 */
+/***/ (function(module, exports) {
+
+const Util = {
+
+  //Length of the vector
+  norm (vec) {
+    return Util.dist([0,0], vec);
+  },
+
+  scale (vec, m) {
+    return [vec[0] * m, vec[1] * m];
+  },
+
+  dist (pos1, pos2) {
+    return Math.sqrt(
+      Math.pow(pos1[0] - pos2[0], 2) + Math.pow(pos1[1], - pos2[1], 2)
+    );
+  },
+
+  //Normalize the length of the vector to 1
+  dir (vec) {
+    const norm = Util.norm(vec);
+    return Util.scale(vec, 1/norm);
+  },
+
+
+  randomVec (length) {
+    const deg = 2 * Math.PI * Math.random();
+    return Util.scale([Math.sin(deg), Math.cos(deg)], length);
+  },
+
+
+  wrap (coord, max) {
+    if (coord < 0) {
+      return max - (coord % max);
+    } else if (coord > max) {
+      return coord % max;
+    } else {
+      return coord;
+    }
+  },
+};
+
+module.exports = Util;
+
+
+/***/ }),
+/* 1 */
+/***/ (function(module, exports, __webpack_require__) {
+
+const Util = __webpack_require__(0);
+
+class MovingObject {
+  constructor(options) {
+    this.pos = options.pos;
+    this.vel = options.vel;
+    this.radius = options.radius;
+    this.color = options.color;
+    this.game = options.game;
+    this.isWrappable = true;
+  }
+
+  draw(ctx) {
+    ctx.fillStyle = this.color;
+    ctx.beginPath();
+    ctx.arc(this.pos[0], this.pos[1], this.radius, 0, 2 * Math.PI, true);
+    ctx.fill();
+  }
+
+  move(timeDelta) {
+    const velocityScale = timeDelta / DEFAULT_FRAME_TIME_DELTA,
+      offsetX = this.vel[0] * velocityScale,
+      offsetY = this.vel[1] * velocityScale;
+
+    this.pos = [this.pos[0] + offsetX, this.pos[1] + offsetY];
+    if (this.game.isOutOfBounds(this.pos)) {
+      if (this.isWrappable) {
+        this.pos = this.game.wrap(this.pos);
+      } else {
+        this.remove();
+      }
+    }
+  }
+
+  remove() {
+    this.game.remove(this);
+  }
+
+
+  collideWith(otherObject) {
+
+  }
+
+  isCollidedWith(otherObject) {
+
+  }
+}
+
+const DEFAULT_FRAME_TIME_DELTA = 1000/60;
+
+module.exports = MovingObject;
+
+
+/***/ }),
+/* 2 */
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
 "use strict";
 Object.defineProperty(__webpack_exports__, "__esModule", { value: true });
-/* harmony import */ var __WEBPACK_IMPORTED_MODULE_0_lodash__ = __webpack_require__(1);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_0_lodash__ = __webpack_require__(7);
 /* harmony import */ var __WEBPACK_IMPORTED_MODULE_0_lodash___default = __webpack_require__.n(__WEBPACK_IMPORTED_MODULE_0_lodash__);
-const Game = __webpack_require__(5);
-const GameView = __webpack_require__(8);
+const Game = __webpack_require__(3);
+const GameView = __webpack_require__(6);
 
 
 
@@ -96,7 +201,237 @@ document.body.appendChild(component());
 
 
 /***/ }),
-/* 1 */
+/* 3 */
+/***/ (function(module, exports, __webpack_require__) {
+
+const Blob = __webpack_require__(4);
+const Util = __webpack_require__(0);
+const Player = __webpack_require__(5);
+
+class Game {
+  constructor() {
+    this.blobs = [];
+    this.player = [];
+    this.addBlobs();
+  }
+
+  add(object) {
+    if (object instanceof Blob) {
+      this.blobs.push(object);
+    } else if (object instanceof Player) {
+      this.player.push(object);
+    } else {
+      throw "unknown type of object";
+    }
+  }
+
+  addBlobs() {
+    for (let i = 0; i < Game.NUM_BLOBS; i++) {
+      this.add(new Blob({game: this}));
+    }
+    console.log(this.blobs);
+  }
+
+  addPlayer() {
+    const player = new Player({
+      pos: this.randomPosition(),
+      game: this
+    });
+
+    this.add(player);
+
+    return player;
+  }
+
+  allObjects() {
+    return [].concat(this.blobs, this.player);
+  }
+
+  draw(ctx) {
+    ctx.clearRect(0, 0, Game.DIM_X, Game.DIM_Y);
+    ctx.fillStyle = Game.BG_COLOR;
+    ctx.fillRect(0, 0, Game.Dim_X, Game.DIM_Y);
+
+    this.allObjects().forEach((object) => {
+      object.draw(ctx);
+    });
+  }
+
+  isOutOfBounds(pos) {
+    return (pos[0] < 0) || (pos[1] < 0) ||
+      (pos[0] > Game.DIM_X) || (pos[1] > Game.DIM_Y);
+  }
+
+  moveObjects(delta) {
+    this.allObjects().forEach((object) => {
+      object.move(delta);
+    });
+  }
+
+  randomPosition() {
+    return [
+      Game.DIM_X * Math.random(),
+      Game.DIM_Y * Math.random()
+    ];
+  }
+
+  remove(object) {
+    if (object instanceof Blob) {
+      this.blobs.splice(this.blobs.indexOf(object), 1);
+    } else {
+      throw "unknown type of object";
+    }
+  }
+
+  step(delta) {
+    this.moveObjects(delta);
+  }
+
+  wrap(pos) {
+    return [
+      Util.wrap(pos[0], Game.DIM_X), Util.wrap(pos[1], Game.DIM_Y)
+    ];
+  }
+
+  checkCollisions() {
+
+  }
+}
+
+Game.BG_COLOR = "#000000";
+Game.DIM_X = 500;
+Game.DIM_Y = 500;
+Game.FPS = 32;
+Game.NUM_BLOBS = 8;
+
+module.exports = Game;
+
+
+/***/ }),
+/* 4 */
+/***/ (function(module, exports, __webpack_require__) {
+
+const Util = __webpack_require__(0);
+const MovingObject = __webpack_require__(1);
+
+const DEFAULTS = {
+  COLOR: "#C70039",
+  RADIUS: 25,
+  SPEED: 1
+};
+
+class Blob extends MovingObject {
+  constructor(options = {}) {
+    options.color = DEFAULTS.COLOR;
+    options.pos = options.pos || options.game.randomPosition();
+    options.radius = DEFAULTS.RADIUS;
+    options.vel = options.vel || Util.randomVec(DEFAULTS.SPEED);
+    super(options);
+  }
+
+  collideWith(otherObject) {
+    return true;
+  }
+}
+
+module.exports = Blob;
+
+
+/***/ }),
+/* 5 */
+/***/ (function(module, exports, __webpack_require__) {
+
+const MovingObject = __webpack_require__(1);
+const Util = __webpack_require__(0);
+
+function randomColor() {
+  const hexDigits = "0123456789ABCDEF";
+
+  let color = "#";
+  for (let i = 0; i < 6; i ++) {
+    color += hexDigits[Math.floor((Math.random() * 16))];
+  }
+
+  return color;
+}
+
+class Player extends MovingObject {
+  constructor(options) {
+    options.radius = Player.RADIUS;
+    options.vel = options.vel || [0, 0];
+    options.color = options.color || randomColor();
+    super(options);
+  }
+
+  relocate() {
+    this.pos = this.game.randomPosition();
+    this.vel = [0, 0];
+  }
+
+  power(move) {
+    this.vel[0] += move[0];
+    this.vel[1] += move[1];
+  }
+}
+
+Player.RADIUS = 15;
+module.exports = Player;
+
+
+/***/ }),
+/* 6 */
+/***/ (function(module, exports) {
+
+class GameView {
+  constructor(game, ctx) {
+    this.ctx = ctx;
+    this.game = game;
+    this.player = this.game.addPlayer();
+  }
+
+  bindKeyHandlers() {
+    const player = this.player;
+
+    Object.keys(GameView.MOVES).forEach((k) => {
+      let move = GameView.MOVES[k];
+      key(k, () => { player.power(move); });
+    });
+
+  }
+
+  start() {
+    this.bindKeyHandlers();
+    this.lastTime = 0;
+    requestAnimationFrame(this.animate.bind(this));
+  }
+
+  animate(time) {
+    const timeDelta = time - this.lastTime;
+
+    this.game.step(timeDelta);
+    this.game.draw(this.ctx);
+    this.lastTime = time;
+
+    requestAnimationFrame(this.animate.bind(this));
+  }
+}
+
+GameView.MOVES = {
+  "w": [ 0, -1],
+  "a": [-1,  0],
+  "s": [ 0,  1],
+  "d": [ 1,  0],
+  "up": [ 0, -1],
+  "left": [-1,  0],
+  "down": [ 0,  1],
+  "right": [ 1,  0]
+};
+
+module.exports = GameView;
+
+
+/***/ }),
+/* 7 */
 /***/ (function(module, exports, __webpack_require__) {
 
 /* WEBPACK VAR INJECTION */(function(global, module) {var __WEBPACK_AMD_DEFINE_RESULT__;/**
@@ -17185,10 +17520,10 @@ document.body.appendChild(component());
   }
 }.call(this));
 
-/* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(2), __webpack_require__(3)(module)))
+/* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(8), __webpack_require__(9)(module)))
 
 /***/ }),
-/* 2 */
+/* 8 */
 /***/ (function(module, exports) {
 
 var g;
@@ -17215,7 +17550,7 @@ module.exports = g;
 
 
 /***/ }),
-/* 3 */
+/* 9 */
 /***/ (function(module, exports) {
 
 module.exports = function(module) {
@@ -17240,337 +17575,6 @@ module.exports = function(module) {
 	}
 	return module;
 };
-
-
-/***/ }),
-/* 4 */
-/***/ (function(module, exports) {
-
-const Util = {
-
-  //Length of the vector
-  norm (vec) {
-    return Util.dist([0,0], vec);
-  },
-
-  scale (vec, m) {
-    return [vec[0] * m, vec[1] * m];
-  },
-
-  dist (pos1, pos2) {
-    return Math.sqrt(
-      Math.pow(pos1[0] - pos2[0], 2) + Math.pow(pos1[1], - pos2[1], 2)
-    );
-  },
-
-  //Normalize the length of the vector to 1
-  dir (vec) {
-    const norm = Util.norm(vec);
-    return Util.scale(vec, 1/norm);
-  },
-
-
-  randomVec (length) {
-    const deg = 2 * Math.PI * Math.random();
-    return Util.scale([Math.sin(deg), Math.cos(deg)], length);
-  },
-
-
-  wrap (coord, max) {
-    if (coord < 0) {
-      return max - (coord % max);
-    } else if (coord > max) {
-      return coord % max;
-    } else {
-      return coord;
-    }
-  },
-};
-
-module.exports = Util;
-
-
-/***/ }),
-/* 5 */
-/***/ (function(module, exports, __webpack_require__) {
-
-const Blob = __webpack_require__(6);
-const Util = __webpack_require__(4);
-const Player = __webpack_require__(9);
-
-class Game {
-  constructor() {
-    this.blobs = [];
-    this.player = [];
-    this.addBlobs();
-  }
-
-  add(object) {
-    if (object instanceof Blob) {
-      this.blobs.push(object);
-    } else if (object instanceof Player) {
-      this.player.push(object);
-    } else {
-      throw "unknown type of object";
-    }
-  }
-
-  addBlobs() {
-    for (let i = 0; i < Game.NUM_BLOBS; i++) {
-      this.add(new Blob({game: this}));
-    }
-    console.log(this.blobs);
-  }
-
-  addPlayer() {
-    const player = new Player({
-      pos: this.randomPosition(),
-      game: this
-    });
-
-    this.add(player);
-
-    return player;
-  }
-
-  allObjects() {
-    return [].concat(this.blobs, this.player);
-  }
-
-  draw(ctx) {
-    ctx.clearRect(0, 0, Game.DIM_X, Game.DIM_Y);
-    ctx.fillStyle = Game.BG_COLOR;
-    ctx.fillRect(0, 0, Game.Dim_X, Game.DIM_Y);
-
-    this.allObjects().forEach((object) => {
-      object.draw(ctx);
-    });
-  }
-
-  isOutOfBounds(pos) {
-    return (pos[0] < 0) || (pos[1] < 0) ||
-      (pos[0] > Game.DIM_X) || (pos[1] > Game.DIM_Y);
-  }
-
-  moveObjects(delta) {
-    this.allObjects().forEach((object) => {
-      object.move(delta);
-    });
-  }
-
-  randomPosition() {
-    return [
-      Game.DIM_X * Math.random(),
-      Game.DIM_Y * Math.random()
-    ];
-  }
-
-  remove(object) {
-    if (object instanceof Blob) {
-      this.blobs.splice(this.blobs.indexOf(object), 1);
-    } else {
-      throw "unknown type of object";
-    }
-  }
-
-  step(delta) {
-    this.moveObjects(delta);
-  }
-
-  wrap(pos) {
-    return [
-      Util.wrap(pos[0], Game.DIM_X), Util.wrap(pos[1], Game.DIM_Y)
-    ];
-  }
-
-  checkCollisions() {
-
-  }
-}
-
-Game.BG_COLOR = "#000000";
-Game.DIM_X = 500;
-Game.DIM_Y = 500;
-Game.FPS = 32;
-Game.NUM_BLOBS = 8;
-
-module.exports = Game;
-
-
-/***/ }),
-/* 6 */
-/***/ (function(module, exports, __webpack_require__) {
-
-const Util = __webpack_require__(4);
-const MovingObject = __webpack_require__(7);
-
-const DEFAULTS = {
-  COLOR: "#C70039",
-  RADIUS: 25,
-  SPEED: 1
-};
-
-class Blob extends MovingObject {
-  constructor(options = {}) {
-    options.color = DEFAULTS.COLOR;
-    options.pos = options.pos || options.game.randomPosition();
-    options.radius = DEFAULTS.RADIUS;
-    options.vel = options.vel || Util.randomVec(DEFAULTS.SPEED);
-    super(options);
-  }
-
-  collideWith(otherObject) {
-    return true;
-  }
-}
-
-module.exports = Blob;
-
-
-/***/ }),
-/* 7 */
-/***/ (function(module, exports, __webpack_require__) {
-
-const Util = __webpack_require__(4);
-
-class MovingObject {
-  constructor(options) {
-    this.pos = options.pos;
-    this.vel = options.vel;
-    this.radius = options.radius;
-    this.color = options.color;
-    this.game = options.game;
-    this.isWrappable = true;
-  }
-
-  draw(ctx) {
-    ctx.fillStyle = this.color;
-    ctx.beginPath();
-    ctx.arc(this.pos[0], this.pos[1], this.radius, 0, 2 * Math.PI, true);
-    ctx.fill();
-  }
-
-  move(timeDelta) {
-    const velocityScale = timeDelta / DEFAULT_FRAME_TIME_DELTA,
-      offsetX = this.vel[0] * velocityScale,
-      offsetY = this.vel[1] * velocityScale;
-
-    this.pos = [this.pos[0] + offsetX, this.pos[1] + offsetY];
-    if (this.game.isOutOfBounds(this.pos)) {
-      if (this.isWrappable) {
-        this.pos = this.game.wrap(this.pos);
-      } else {
-        this.remove();
-      }
-    }
-  }
-
-  remove() {
-    this.game.remove(this);
-  }
-
-
-  collideWith(otherObject) {
-
-  }
-
-  isCollidedWith(otherObject) {
-
-  }
-}
-
-const DEFAULT_FRAME_TIME_DELTA = 1000/60;
-
-module.exports = MovingObject;
-
-
-/***/ }),
-/* 8 */
-/***/ (function(module, exports) {
-
-class GameView {
-  constructor(game, ctx) {
-    this.ctx = ctx;
-    this.game = game;
-    this.player = this.game.addPlayer();
-  }
-
-  bindKeyHandlers() {
-    const player = this.player;
-
-    Object.keys(GameView.MOVES).forEach((k) => {
-      let move = GameView.MOVES[k];
-      key(k, () => { player.power(move); });
-    });
-
-  }
-
-  start() {
-    this.bindKeyHandlers();
-    this.lastTime = 0;
-    requestAnimationFrame(this.animate.bind(this));
-  }
-
-  animate(time) {
-    const timeDelta = time - this.lastTime;
-
-    this.game.step(timeDelta);
-    this.game.draw(this.ctx);
-    this.lastTime = time;
-
-    requestAnimationFrame(this.animate.bind(this));
-  }
-}
-
-GameView.MOVES = {
-  "w": [ 0, -1],
-  "a": [-1,  0],
-  "s": [ 0,  1],
-  "d": [ 1,  0],
-};
-
-module.exports = GameView;
-
-
-/***/ }),
-/* 9 */
-/***/ (function(module, exports, __webpack_require__) {
-
-const MovingObject = __webpack_require__(7);
-const Util = __webpack_require__(4);
-
-function randomColor() {
-  const hexDigits = "0123456789ABCDEF";
-
-  let color = "#";
-  for (let i = 0; i < 6; i ++) {
-    color += hexDigits[Math.floor((Math.random() * 16))];
-  }
-
-  return color;
-}
-
-class Player extends MovingObject {
-  constructor(options) {
-    options.radius = Player.RADIUS;
-    options.vel = options.vel || [0, 0];
-    options.color = options.color || randomColor();
-    super(options);
-  }
-
-  relocate() {
-    this.pos = this.game.randomPosition();
-    this.vel = [0, 0];
-  }
-
-  power(move) {
-    this.vel[0] += move[0];
-    this.vel[1] += move[1];
-  }
-}
-
-Player.RADIUS = 15;
-module.exports = Player;
 
 
 /***/ })
